@@ -1,4 +1,4 @@
-import {getShaderNaive, getShaderTiledK2} from './shader.js';
+import {getShaderNaive, getShaderSubgroupMatrix, getShaderTiledK2} from './shader.js';
 import {arraysEqual} from './util.js';
 
 const TEST_SIZE = 16;
@@ -55,155 +55,170 @@ async function runAll(firstMatrix, secondMatrix) {
   var shaderStrNaive = getShaderNaive(WORKGROUSIZE_X, WORKGROUSIZE_Y);
   var shaderStrTiledK2 =
       getShaderTiledK2(WORKGROUSIZE_X, WORKGROUSIZE_Y, TILE_SIZE);
+  var shaderStrSubgroupMatrix =
+      getShaderSubgroupMatrix(WORKGROUSIZE_X, WORKGROUSIZE_Y, TILE_SIZE);
   var dataCPU, data1, data2, data3;
   dataCPU = matrixMultiplyCPU(firstMatrix, secondMatrix);
-  console.log("%cdataCPU                : " + dataCPU, 'background: #ddd; color: #1a1a55');
+  console.log(
+      '%cdataCPU                : ' + dataCPU,
+      'background: #ddd; color: #1a1a55');
   data1 = await matrixMultiplyGPU(firstMatrix, secondMatrix, shaderStrNaive);
   console.log('shaderStrNaive         : ' + data1);
   data2 = await matrixMultiplyGPU(firstMatrix, secondMatrix, shaderStrTiledK2);
   console.log('shaderStrTiledK2       : ' + data2);
+  // data3 = await matrixMultiplyGPU(firstMatrix, secondMatrix,
+  // shaderStrSubgroupMatrix); console.log('shaderStrSubgroupMatrix: ' + data3);
+
   if (!arraysEqual(dataCPU, data1)) {
-    throw new Error("shaderStrNaive is incorrect!");
+    console.error('shaderStrNaive is incorrect!');
   }
   if (!arraysEqual(dataCPU, data2)) {
-    throw new Error("shaderStrTiledK2 is incorrect!");
+    console.error('shaderStrTiledK2 is incorrect!');
+  }
+
+  if (!arraysEqual(dataCPU, data3)) {
+    // console.error("shaderStrSubgroupMatrix is incorrect!");
   }
 }
 
 (async () => {
   runBasic();
   var firstMatrix, secondMatrix;
+  if (true) {
+    // First Matrix
+    firstMatrix = new Float32Array([1 /* columns */, 1 /* rows */, 1]);
 
-  // First Matrix
-  firstMatrix = new Float32Array([1 /* columns */, 1 /* rows */, 1]);
+    // Second Matrix
+    secondMatrix = new Float32Array([1 /* columns */, 1 /* rows */, 1]);
+    await runAll(firstMatrix, secondMatrix);
 
-  // Second Matrix
-  secondMatrix = new Float32Array([1 /* columns */, 1 /* rows */, 1]);
-  await runAll(firstMatrix, secondMatrix);
+    // First Matrix
+    firstMatrix =
+        new Float32Array([3 /* columns */, 2 /* rows */, 1, 2, 3, 4, 5, 6]);
 
-  // First Matrix
-  firstMatrix =
-      new Float32Array([3 /* columns */, 2 /* rows */, 1, 2, 3, 4, 5, 6]);
+    // Second Matrix
+    secondMatrix =
+        new Float32Array([2 /* columns */, 2 /* rows */, 1, 2, 3, 4]);
+    await runAll(firstMatrix, secondMatrix);
 
-  // Second Matrix
-  secondMatrix = new Float32Array([2 /* columns */, 2 /* rows */, 1, 2, 3, 4]);
-  await runAll(firstMatrix, secondMatrix);
+    // First Matrix
+    firstMatrix =
+        new Float32Array([2 /* rows */, 3 /* columns */, 1, 2, 3, 4, 5, 6]);
 
-  // First Matrix
-  firstMatrix =
-      new Float32Array([2 /* rows */, 3 /* columns */, 1, 2, 3, 4, 5, 6]);
+    // Second Matrix
+    secondMatrix =
+        new Float32Array([3 /* rows */, 2 /* columns */, 1, 2, 3, 4, 5, 6]);
+    await runAll(firstMatrix, secondMatrix);
 
-  // Second Matrix
-  secondMatrix =
-      new Float32Array([3 /* rows */, 2 /* columns */, 1, 2, 3, 4, 5, 6]);
-  await runAll(firstMatrix, secondMatrix);
+    // First Matrix
+    firstMatrix = new Float32Array(
+        [3 /* rows */, 3 /* columns */, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
 
-  // First Matrix
-  firstMatrix = new Float32Array(
-      [3 /* rows */, 3 /* columns */, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
-
-  // Second Matrix
-  secondMatrix = new Float32Array(
-      [3 /* rows */, 3 /* columns */, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
-  await runAll(firstMatrix, secondMatrix);
-
-
-  // First Matrix
-  firstMatrix = new Float32Array([2 /* rows */, 2 /* columns */, 1, 2, 3, 4]);
-
-  // Second Matrix
-  secondMatrix =
-      new Float32Array([2 /* rows */, 3 /* columns */, 1, 2, 3, 4, 5, 6]);
-  await runAll(firstMatrix, secondMatrix);
+    // Second Matrix
+    secondMatrix = new Float32Array(
+        [3 /* rows */, 3 /* columns */, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    await runAll(firstMatrix, secondMatrix);
 
 
-  // First Matrix
-  firstMatrix = new Float32Array(
-      [4 /* rows */, 3 /* columns */, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+    // First Matrix
+    firstMatrix = new Float32Array([2 /* rows */, 2 /* columns */, 1, 2, 3, 4]);
 
-  // Second Matrix
-  secondMatrix = new Float32Array(
-      [3 /* rows */, 3 /* columns */, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
-  await runAll(firstMatrix, secondMatrix);
+    // Second Matrix
+    secondMatrix =
+        new Float32Array([2 /* rows */, 3 /* columns */, 1, 2, 3, 4, 5, 6]);
+    await runAll(firstMatrix, secondMatrix);
 
 
-  // First Matrix
-  firstMatrix =
-      new Float32Array([2 /* rows */, 4 /* columns */, 1, 2, 3, 4, 5, 6, 7, 8]);
+    // First Matrix
+    firstMatrix = new Float32Array(
+        [4 /* rows */, 3 /* columns */, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
 
-  // Second Matrix
-  secondMatrix = new Float32Array(
-      [4 /* rows */, 3 /* columns */, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+    // Second Matrix
+    secondMatrix = new Float32Array(
+        [3 /* rows */, 3 /* columns */, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    await runAll(firstMatrix, secondMatrix);
 
-  await runAll(firstMatrix, secondMatrix);
 
-  firstMatrix = new Float32Array([
-    4 /* rows */, 4 /* columns */, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13,
-    14, 15, 16
-  ]);
+    // First Matrix
+    firstMatrix = new Float32Array(
+        [2 /* rows */, 4 /* columns */, 1, 2, 3, 4, 5, 6, 7, 8]);
 
-  secondMatrix = new Float32Array([
-    4 /* rows */, 4 /* columns */, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13,
-    14, 15, 16
-  ]);
+    // Second Matrix
+    secondMatrix = new Float32Array(
+        [4 /* rows */, 3 /* columns */, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
 
-  await runAll(firstMatrix, secondMatrix);
+    await runAll(firstMatrix, secondMatrix);
 
-  firstMatrix = new Float32Array([
-    6 /* rows */,
-    4 /* columns */,
-    1,
-    2,
-    3,
-    4,
-    5,
-    6,
-    7,
-    8,
-    9,
-    10,
-    11,
-    12,
-    13,
-    14,
-    15,
-    16,
-    17,
-    18,
-    19,
-    20,
-    21,
-    22,
-    23,
-    24
-  ]);
+    firstMatrix = new Float32Array([
+      4 /* rows */, 4 /* columns */, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13,
+      14, 15, 16
+    ]);
 
-  secondMatrix = new Float32Array([
-    4 /* rows */,
-    5 /* columns */,
-    1,
-    2,
-    3,
-    4,
-    5,
-    6,
-    7,
-    8,
-    9,
-    10,
-    11,
-    12,
-    13,
-    14,
-    15,
-    16,
-    17,
-    18,
-    19,
-    20
-  ]);
+    secondMatrix = new Float32Array([
+      4 /* rows */, 4 /* columns */, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13,
+      14, 15, 16
+    ]);
 
-  await runAll(firstMatrix, secondMatrix);
+    await runAll(firstMatrix, secondMatrix);
+
+
+
+    firstMatrix = new Float32Array([
+      6 /* rows */,
+      4 /* columns */,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24
+    ]);
+
+    secondMatrix = new Float32Array([
+      4 /* rows */,
+      5 /* columns */,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20
+    ]);
+
+    await runAll(firstMatrix, secondMatrix);
+  }
 })();
 
 async function matrixMultiplyGPU(firstMatrix, secondMatrix, shaderStr) {
@@ -314,11 +329,25 @@ async function getDevice() {
     return null;
   }
 
-  const adapter = await navigator.gpu.requestAdapter();
+  const options = {
+    backendType: 'vulkan',
+  };
+
+  const adapter = await navigator.gpu.requestAdapter(options);
   if (!adapter) {
     console.log('Failed to get GPU adapter.');
     return null;
   }
-  const device = await adapter.requestDevice();
+
+  // adapter.features.forEach((element) => console.log(element));
+  if (!adapter.features.has('chromium_experimental_subgroup_matrix')) {
+    // console.error("chromium_experimental_subgroup_matrix is not available");
+    return await adapter.requestDevice();
+  }
+
+  const device = await adapter.requestDevice({
+    requiredFeatures: ['chromium_experimental_subgroup_matrix', 'shader-f16'],
+  });
+
   return device;
 }

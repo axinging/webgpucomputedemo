@@ -38,8 +38,8 @@ fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
 }
 
 export function getShaderTiledK2(WORKGROUSIZE_X, WORKGROUSIZE_Y, TILE_SIZE) {
-  if (WORKGROUSIZE_Y!= TILE_SIZE) {
-    throw new Error("WORKGROUSIZE_Y!= TILE_SIZE!");
+  if (WORKGROUSIZE_Y != TILE_SIZE) {
+    throw new Error('WORKGROUSIZE_Y!= TILE_SIZE!');
   }
   return `
         struct Matrix {
@@ -86,7 +86,7 @@ export function getShaderTiledK2(WORKGROUSIZE_X, WORKGROUSIZE_Y, TILE_SIZE) {
           
           // Loop over all tiles
           let numTiles = u32(ceil(f32(K)/f32(TS)));
-          for (var t = 0u; t<numTiles; t++) {
+          for (var t = 0u; t < numTiles; t++) {
               // Load one tile of A and B into local memory
               let tiledRow = TS*t + row;
               let tiledCol = TS*t + col;
@@ -110,5 +110,35 @@ export function getShaderTiledK2(WORKGROUSIZE_X, WORKGROUSIZE_Y, TILE_SIZE) {
           // Store the final result in C
           resultMatrix.numbers[globalCol*M + globalRow] = acc;
         }
+`
+}
+
+
+export function getShaderSubgroupMatrix(M, N, K) {
+  return `
+enable chromium_experimental_subgroup_matrix;
+enable f16;
+
+alias ComponentType = f16;
+alias ResultComponentType = f32;
+
+const M = ${M};//8;
+const N = ${N};//16;
+const K = ${K};//16;
+const SubgroupMaxSize = 32;
+
+@group(0) @binding(0) var<storage, read>       inputs : array<ComponentType, K*M + N*K>;
+@group(0) @binding(1) var<storage, read_write> output : array<ResultComponentType, M*N>;
+
+@compute @workgroup_size(SubgroupMaxSize)
+fn main() {
+    let lhs = subgroupMatrixLoad<subgroup_matrix_left<ComponentType, K, M>>(&inputs,  0, true, M);
+    let rhs = subgroupMatrixLoad<subgroup_matrix_right<ComponentType, N, K>>(&inputs, K*M, true, K);
+let zero = subgroup_matrix_result<ResultComponentType, N, M>();
+var result = subgroupMatrixMultiplyAccumulate(lhs, rhs, zero);
+result = subgroupMatrixMultiplyAccumulate(lhs, rhs, result);
+
+    subgroupMatrixStore(&output, 0, result, true, M);
+}
 `
 }
